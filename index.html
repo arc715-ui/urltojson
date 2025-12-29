@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="YT Collector">
+    <title>YouTube URL Collector</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+        
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a24;
+            --bg-hover: #252532;
+            --accent: #ff3366;
+            --accent-glow: rgba(255, 51, 102, 0.3);
+            --text-primary: #ffffff;
+            --text-secondary: #8888aa;
+            --text-muted: #555566;
+            --border: #2a2a3a;
+            --success: #00cc88;
+            --warning: #ffaa00;
+            --danger: #ff4466;
+            --youtube-red: #ff0000;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        html, body {
+            height: 100%;
+        }
+        
+        body {
+            font-family: 'Noto Sans JP', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+            overflow-x: hidden;
+        }
+        
+        /* Animated background */
+        .bg-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse at 20% 20%, rgba(255, 51, 102, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(102, 51, 255, 0.06) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            padding-top: env(safe-area-inset-top, 20px);
+            padding-bottom: calc(80px + env(safe-area-inset-bottom, 20px));
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--youtube-red), var(--accent));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+        
+        .logo-text {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 300;
+        }
+        
+        /* Stats bar */
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        /* Input area */
+        .input-section {
+            margin-bottom: 20px;
+        }
+        
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            gap: 8px;
+        }
+        
+        .url-input {
+            flex: 1;
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 16px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            transition: all 0.2s;
+        }
+        
+        .url-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px var(--accent-glow);
+        }
+        
+        .url-input::placeholder {
+            color: var(--text-muted);
+        }
+        
+        .add-btn {
+            background: linear-gradient(135deg, var(--accent), #cc2255);
+            border: none;
+            border-radius: 12px;
+            padding: 16px 24px;
+            font-size: 20px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .add-btn:active {
+            transform: scale(0.95);
+        }
+        
+        /* Category selector */
+        .category-selector {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .category-chip {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .category-chip.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+        
+        .category-chip:active {
+            transform: scale(0.95);
+        }
+        
+        /* URL List */
+        .url-list {
+            margin-bottom: 20px;
+        }
+        
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .list-title {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+        
+        .clear-all-btn {
+            background: transparent;
+            border: 1px solid var(--danger);
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 12px;
+            color: var(--danger);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .clear-all-btn:active {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .url-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .url-item.removing {
+            animation: slideOut 0.3s ease forwards;
+        }
+        
+        @keyframes slideOut {
+            to {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+        }
+        
+        .url-thumbnail {
+            width: 80px;
+            height: 45px;
+            background: var(--bg-hover);
+            border-radius: 6px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        
+        .url-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .url-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .url-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 4px;
+        }
+        
+        .url-category {
+            display: inline-block;
+            background: var(--bg-hover);
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 11px;
+            color: var(--accent);
+        }
+        
+        .url-delete {
+            width: 36px;
+            height: 36px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        
+        .url-delete:active {
+            background: var(--danger);
+            border-color: var(--danger);
+            color: white;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        
+        .empty-state-text {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        /* Bottom action bar */
+        .action-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, var(--bg-primary) 60%, transparent);
+            padding: 20px;
+            padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+            z-index: 100;
+        }
+        
+        .action-bar-inner {
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            gap: 12px;
+        }
+        
+        .export-btn {
+            flex: 1;
+            background: linear-gradient(135deg, var(--success), #00aa66);
+            border: none;
+            border-radius: 14px;
+            padding: 18px;
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 20px rgba(0, 204, 136, 0.3);
+        }
+        
+        .export-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .export-btn:not(:disabled):active {
+            transform: scale(0.98);
+        }
+        
+        .copy-btn {
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: 14px;
+            padding: 18px;
+            font-size: 20px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .copy-btn:active {
+            background: var(--bg-hover);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            top: calc(20px + env(safe-area-inset-top, 0px));
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        .toast.success {
+            border-color: var(--success);
+        }
+        
+        .toast.error {
+            border-color: var(--danger);
+        }
+        
+        /* Share target info */
+        .share-info {
+            background: var(--bg-card);
+            border: 1px dashed var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .share-info-title {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        
+        .share-steps {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.8;
+        }
+        
+        .share-steps strong {
+            color: var(--accent);
+        }
+        
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 500;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        
+        .modal-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .modal {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            border-radius: 24px 24px 0 0;
+            padding: 24px;
+            padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+            z-index: 501;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        .modal.show {
+            transform: translateY(0);
+        }
+        
+        .modal-handle {
+            width: 40px;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            margin: 0 auto 20px;
+        }
+        
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        
+        .json-preview {
+            background: var(--bg-primary);
+            border-radius: 12px;
+            padding: 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-secondary);
+            max-height: 200px;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin-bottom: 16px;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .modal-btn {
+            flex: 1;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+        
+        .modal-btn.primary {
+            background: var(--success);
+            color: white;
+        }
+        
+        .modal-btn.secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+    
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">▶</div>
+                <span class="logo-text">YT Collector</span>
+            </div>
+            <p class="subtitle">YouTube URLを収集してJSONに変換</p>
+        </header>
+        
+        <div class="stats-bar">
+            <div class="stat">
+                <div class="stat-value" id="urlCount">0</div>
+                <div class="stat-label">保存済み</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="todayCount">0</div>
+                <div class="stat-label">今日追加</div>
+            </div>
+        </div>
+        
+        <div class="share-info">
+            <div class="share-info-title">📱 iPhoneから共有で追加</div>
+            <div class="share-steps">
+                YouTubeアプリで <strong>共有</strong> → このアプリを選択<br>
+                またはURLを下に貼り付け
+            </div>
+        </div>
+        
+        <section class="input-section">
+            <div class="input-wrapper">
+                <input type="url" 
+                       class="url-input" 
+                       id="urlInput" 
+                       placeholder="YouTube URLを貼り付け..."
+                       autocomplete="off"
+                       autocapitalize="off">
+                <button class="add-btn" id="addBtn">+</button>
+            </div>
+            <div class="category-selector" id="categorySelector">
+                <button class="category-chip active" data-category="">未分類</button>
+                <button class="category-chip" data-category="投資">投資</button>
+                <button class="category-chip" data-category="資格勉強">資格</button>
+                <button class="category-chip" data-category="医療">医療</button>
+                <button class="category-chip" data-category="育児">育児</button>
+                <button class="category-chip" data-category="その他">他</button>
+            </div>
+        </section>
+        
+        <section class="url-list">
+            <div class="list-header">
+                <span class="list-title">保存したURL</span>
+                <button class="clear-all-btn" id="clearAllBtn">すべて削除</button>
+            </div>
+            <div id="urlListContainer">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <div class="empty-state-text">
+                        まだURLがありません<br>
+                        YouTubeからURLを共有してください
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    
+    <div class="action-bar">
+        <div class="action-bar-inner">
+            <button class="export-btn" id="exportBtn" disabled>
+                <span>📤</span>
+                <span>JSONをエクスポート</span>
+            </button>
+            <button class="copy-btn" id="copyBtn" title="JSONをコピー">📋</button>
+        </div>
+    </div>
+    
+    <div class="toast" id="toast">
+        <span id="toastIcon">✓</span>
+        <span id="toastMessage">保存しました</span>
+    </div>
+    
+    <div class="modal-overlay" id="modalOverlay"></div>
+    <div class="modal" id="exportModal">
+        <div class="modal-handle"></div>
+        <h3 class="modal-title">JSONプレビュー</h3>
+        <div class="json-preview" id="jsonPreview"></div>
+        <div class="modal-actions">
+            <button class="modal-btn secondary" id="closeModalBtn">閉じる</button>
+            <button class="modal-btn primary" id="downloadBtn">ダウンロード</button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // データ管理
+        // ==========================================
+        const STORAGE_KEY = 'yt_collector_urls';
+        
+        function loadUrls() {
+            try {
+                const data = localStorage.getItem(STORAGE_KEY);
+                return data ? JSON.parse(data) : [];
+            } catch {
+                return [];
+            }
+        }
+        
+        function saveUrls(urls) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(urls));
+        }
+        
+        function extractVideoId(url) {
+            const patterns = [
+                /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+                /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
+            ];
+            for (const pattern of patterns) {
+                const match = url.match(pattern);
+                if (match) return match[1];
+            }
+            return null;
+        }
+        
+        function getThumbnailUrl(videoId) {
+            return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+        }
+        
+        // ==========================================
+        // UI管理
+        // ==========================================
+        let urls = loadUrls();
+        let selectedCategory = '';
+        
+        const elements = {
+            urlInput: document.getElementById('urlInput'),
+            addBtn: document.getElementById('addBtn'),
+            categorySelector: document.getElementById('categorySelector'),
+            urlListContainer: document.getElementById('urlListContainer'),
+            urlCount: document.getElementById('urlCount'),
+            todayCount: document.getElementById('todayCount'),
+            exportBtn: document.getElementById('exportBtn'),
+            copyBtn: document.getElementById('copyBtn'),
+            clearAllBtn: document.getElementById('clearAllBtn'),
+            toast: document.getElementById('toast'),
+            toastIcon: document.getElementById('toastIcon'),
+            toastMessage: document.getElementById('toastMessage'),
+            modalOverlay: document.getElementById('modalOverlay'),
+            exportModal: document.getElementById('exportModal'),
+            jsonPreview: document.getElementById('jsonPreview'),
+            closeModalBtn: document.getElementById('closeModalBtn'),
+            downloadBtn: document.getElementById('downloadBtn')
+        };
+        
+        function showToast(message, type = 'success') {
+            elements.toastIcon.textContent = type === 'success' ? '✓' : '✕';
+            elements.toastMessage.textContent = message;
+            elements.toast.className = `toast show ${type}`;
+            
+            setTimeout(() => {
+                elements.toast.classList.remove('show');
+            }, 2500);
+        }
+        
+        function updateStats() {
+            elements.urlCount.textContent = urls.length;
+            
+            const today = new Date().toDateString();
+            const todayUrls = urls.filter(u => new Date(u.addedAt).toDateString() === today);
+            elements.todayCount.textContent = todayUrls.length;
+            
+            elements.exportBtn.disabled = urls.length === 0;
+        }
+        
+        function renderUrlList() {
+            if (urls.length === 0) {
+                elements.urlListContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <div class="empty-state-text">
+                            まだURLがありません<br>
+                            YouTubeからURLを共有してください
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            const html = urls.map((item, index) => {
+                const videoId = extractVideoId(item.url);
+                const thumbnail = videoId ? getThumbnailUrl(videoId) : '';
+                
+                return `
+                    <div class="url-item" data-index="${index}">
+                        <div class="url-thumbnail">
+                            ${thumbnail ? `<img src="${thumbnail}" alt="" loading="lazy">` : ''}
+                        </div>
+                        <div class="url-info">
+                            <div class="url-text">${item.url}</div>
+                            ${item.category ? `<span class="url-category">${item.category}</span>` : ''}
+                        </div>
+                        <button class="url-delete" data-index="${index}">×</button>
+                    </div>
+                `;
+            }).join('');
+            
+            elements.urlListContainer.innerHTML = html;
+        }
+        
+        function addUrl(url) {
+            const videoId = extractVideoId(url);
+            if (!videoId) {
+                showToast('有効なYouTube URLではありません', 'error');
+                return false;
+            }
+            
+            // 重複チェック
+            if (urls.some(u => extractVideoId(u.url) === videoId)) {
+                showToast('このURLは既に追加されています', 'error');
+                return false;
+            }
+            
+            const newItem = {
+                url: url.trim(),
+                category: selectedCategory || null,
+                addedAt: new Date().toISOString()
+            };
+            
+            urls.unshift(newItem);
+            saveUrls(urls);
+            renderUrlList();
+            updateStats();
+            showToast('URLを追加しました');
+            return true;
+        }
+        
+        function deleteUrl(index) {
+            const item = elements.urlListContainer.querySelector(`[data-index="${index}"]`);
+            if (item) {
+                item.classList.add('removing');
+                setTimeout(() => {
+                    urls.splice(index, 1);
+                    saveUrls(urls);
+                    renderUrlList();
+                    updateStats();
+                }, 300);
+            }
+        }
+        
+        function generateJson() {
+            const output = {
+                generated_at: new Date().toISOString(),
+                videos: urls.map(item => ({
+                    url: item.url,
+                    category: item.category,
+                    manual_title: null
+                }))
+            };
+            return JSON.stringify(output, null, 2);
+        }
+        
+        function showExportModal() {
+            const json = generateJson();
+            elements.jsonPreview.textContent = json;
+            elements.modalOverlay.classList.add('show');
+            elements.exportModal.classList.add('show');
+        }
+        
+        function hideExportModal() {
+            elements.modalOverlay.classList.remove('show');
+            elements.exportModal.classList.remove('show');
+        }
+        
+        function downloadJson() {
+            const json = generateJson();
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const date = new Date().toISOString().slice(0, 10);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `videos_${date}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            hideExportModal();
+            showToast('JSONをダウンロードしました');
+        }
+        
+        async function copyJson() {
+            try {
+                const json = generateJson();
+                await navigator.clipboard.writeText(json);
+                showToast('JSONをクリップボードにコピーしました');
+            } catch {
+                showToast('コピーに失敗しました', 'error');
+            }
+        }
+        
+        // ==========================================
+        // イベントリスナー
+        // ==========================================
+        elements.addBtn.addEventListener('click', () => {
+            const url = elements.urlInput.value.trim();
+            if (url && addUrl(url)) {
+                elements.urlInput.value = '';
+            }
+        });
+        
+        elements.urlInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                elements.addBtn.click();
+            }
+        });
+        
+        // ペースト時の自動追加
+        elements.urlInput.addEventListener('paste', (e) => {
+            setTimeout(() => {
+                const url = elements.urlInput.value.trim();
+                if (url && extractVideoId(url)) {
+                    addUrl(url);
+                    elements.urlInput.value = '';
+                }
+            }, 100);
+        });
+        
+        // カテゴリ選択
+        elements.categorySelector.addEventListener('click', (e) => {
+            if (e.target.classList.contains('category-chip')) {
+                document.querySelectorAll('.category-chip').forEach(c => c.classList.remove('active'));
+                e.target.classList.add('active');
+                selectedCategory = e.target.dataset.category;
+            }
+        });
+        
+        // URL削除
+        elements.urlListContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('url-delete')) {
+                const index = parseInt(e.target.dataset.index);
+                deleteUrl(index);
+            }
+        });
+        
+        // すべて削除
+        elements.clearAllBtn.addEventListener('click', () => {
+            if (urls.length > 0 && confirm('すべてのURLを削除しますか？')) {
+                urls = [];
+                saveUrls(urls);
+                renderUrlList();
+                updateStats();
+                showToast('すべて削除しました');
+            }
+        });
+        
+        // エクスポート
+        elements.exportBtn.addEventListener('click', showExportModal);
+        elements.copyBtn.addEventListener('click', copyJson);
+        elements.closeModalBtn.addEventListener('click', hideExportModal);
+        elements.downloadBtn.addEventListener('click', downloadJson);
+        elements.modalOverlay.addEventListener('click', hideExportModal);
+        
+        // ==========================================
+        // 共有API対応（PWA）
+        // ==========================================
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
+        
+        // URL パラメータから共有データを取得
+        const urlParams = new URLSearchParams(window.location.search);
+        const sharedUrl = urlParams.get('url') || urlParams.get('text');
+        if (sharedUrl) {
+            // YouTube URLを抽出
+            const ytMatch = sharedUrl.match(/(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)[^\s]*/);
+            if (ytMatch) {
+                setTimeout(() => {
+                    addUrl(ytMatch[0]);
+                    // URLパラメータをクリア
+                    window.history.replaceState({}, '', window.location.pathname);
+                }, 500);
+            }
+        }
+        
+        // 初期化
+        renderUrlList();
+        updateStats();
+    </script>
+</body>
+</html>
