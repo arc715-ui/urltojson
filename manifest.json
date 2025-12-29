@@ -2,7 +2,8 @@
     "name": "YouTube URL Collector",
     "short_name": "YT Collector",
     "description": "YouTube URLを収集してJSONファイルに変換するアプリ",
-    "start_url": "/",
+    "start_url": "/urltojson/",
+    "scope": "/urltojson/",
     "display": "standalone",
     "background_color": "#0a0a0f",
     "theme_color": "#ff3366",
@@ -22,7 +23,7 @@
         }
     ],
     "share_target": {
-        "action": "/",
+        "action": "/urltojson/",
         "method": "GET",
         "params": {
             "title": "title",
